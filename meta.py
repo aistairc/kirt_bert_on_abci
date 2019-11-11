@@ -21,9 +21,13 @@ class DB:
     def __init__(self, storage_dir, name='', key_prefix=None, to_write=False):
 
         self.storage_dir = Path(storage_dir)
-        self.shelf_filepath = self.storage_dir / (name + '_shelf.db')
         flag = 'n' if to_write else 'r'
-        self.shelf = shelve.open(str(self.shelf_filepath), flag=flag, protocol=-1)
+        try:
+            self.shelf_filepath = self.storage_dir / (name + '_shelf.db')
+            self.shelf = shelve.open(str(self.shelf_filepath), flag=flag, protocol=-1)
+        except:
+            self.shelf_filepath = self.storage_dir / (name + '_shelf.db.dat')
+            self.shelf = shelve.open(str(self.shelf_filepath), flag=flag, protocol=-1)
 
         self.current_idx = len(self.shelf.keys())
         self.key_prefix = key_prefix
