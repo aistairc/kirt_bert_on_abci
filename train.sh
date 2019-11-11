@@ -28,7 +28,7 @@ echo "Task ID is $SGE_TASK_ID"
 NUM_NODES=2
 NUM_GPUS_PER_NODE=4
 
-ARGS="python train_on_pregenerated.py --pregenerated_data=data/generated/epochs/ --bert_model=data/generated/abci_bert_base/ --output_dir=data/generated/abci_bert_base/model/ --train_batch_size=8 --epochs=5 --learning_rate=1e-4 --optimizer=RADAM --large_train_data --fp16 --save_checkpoint_steps=5"
+ARGS="train_on_pregenerated.py --pregenerated_data=data/generated/epochs/ --bert_model=data/generated/abci_bert_base/ --output_dir=data/generated/abci_bert_base/model/ --train_batch_size=8 --epochs=5 --learning_rate=1e-4 --optimizer=RADAM --large_train_data --fp16 --save_checkpoint_steps=5"
 
 echo "Training..."
 
