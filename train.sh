@@ -22,6 +22,7 @@ export PYTHONUNBUFFERED=1
 echo "Clear cache"
 mkdir .cache
 rm .cache/*
+CACHE_DIR=".cache"
 
 echo "Task ID is $SGE_TASK_ID"
 
@@ -32,4 +33,4 @@ ARGS="train_on_pregenerated.py --pregenerated_data=data/generated/epochs/ --bert
 
 echo "Training..."
 
-singularity run --nv ~/pytorch-19.06-py3.simg python prepare_args.py $NUM_NODES $NUM_GPUS_PER_NODE $SGE_TASK_ID $ARGS
+singularity run --nv ~/pytorch-19.06-py3.simg python prepare_args.py $CACHE_DIR $NUM_NODES $NUM_GPUS_PER_NODE $SGE_TASK_ID $ARGS
