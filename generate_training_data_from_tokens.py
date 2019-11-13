@@ -163,7 +163,7 @@ def create_samples_from_document(doc_idx, doc_database, args, tokenizer, vocab_l
     current_length = last_chunk[1]
     if not separate_sentences and current_length > 0:
         # Add [SEP] token to the end of last document
-        current_chunk.append(["[SEP"])
+        current_chunk.append(["[SEP]"])
         current_length += 1
     i = 0
     try:

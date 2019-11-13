@@ -26,8 +26,12 @@ class DB:
             self.shelf_filepath = self.storage_dir / (name + '_shelf.db')
             self.shelf = shelve.open(str(self.shelf_filepath), flag=flag, protocol=-1)
         except:
-            self.shelf_filepath = self.storage_dir / (name + '_shelf.db.dat')
-            self.shelf = shelve.open(str(self.shelf_filepath), flag=flag, protocol=-1)
+            try:
+                self.shelf_filepath = self.storage_dir / (name + '_shelf.db.dat')
+                self.shelf = shelve.open(str(self.shelf_filepath), flag=flag, protocol=-1)
+            except:
+                import traceback
+                traceback.print_exc()
 
         self.current_idx = len(self.shelf.keys())
         self.key_prefix = key_prefix
