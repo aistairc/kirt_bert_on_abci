@@ -46,6 +46,10 @@ We also prepare a script for training the BERT on the ABCI: train.sh, where the 
 NUM_NODES=2: 2 = number of ABCI nodes
 #$ -t 1-2: In case of changing the NUM_NODES to X, please change this configuration to '1-X'
 ```
+***IMPORTANT: Manually create/clear cache dir before training, while cache dir is configured in train.sh here: ***
+```
+CACHE_DIR=".cache"
+```
 
 # Evaluate trained BERT model
 For assessing the performance of our pre-trained BERT model, we conducted the experiment on the Named Entity Recognition task using the model implemented [here](https://github.com/dnanhkhoa/ProtoNLP). This model is inspired by the paper "[Deep Exhaustive Model for Nested Named Entity Recognition](https://www.aclweb.org/anthology/D18-1309.pdf)" with replacing the LSTM layer by BERT. 

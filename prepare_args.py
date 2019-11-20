@@ -29,6 +29,7 @@ def main():
     # Read master info
     with open(os.path.join(cache_dir, "rank.0"), "r") as f:
         master_address = f.read().strip()
+        print('Master address: ', master_address)
 
         os.system(
             "python -m torch.distributed.launch --nproc_per_node={} --nnodes={} --node_rank={} --master_addr={} --master_port=9000 {}".format(

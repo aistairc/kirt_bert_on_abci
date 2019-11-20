@@ -19,9 +19,6 @@ module load singularity/2.6.1
 
 export PYTHONUNBUFFERED=1
 
-echo "Clear cache"
-mkdir .cache
-rm .cache/*
 CACHE_DIR=".cache"
 
 echo "Task ID is $SGE_TASK_ID"
