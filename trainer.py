@@ -12,7 +12,7 @@ from tqdm import tqdm
 from meta import DB, PregeneratedDataset
 from opt.lamb import Lamb
 from opt.radam import RAdam
-from transformers.optimization import AdamW, WarmupLinearSchedule
+from transformers.optimization import AdamW, get_linear_schedule_with_warmup
 from utils import save_model, log_training
 
 logger = logging.getLogger(__name__)
@@ -104,7 +104,7 @@ class Train(object):
         no_decay = ['bias', 'LayerNorm.bias', 'LayerNorm.weight']
         optimizer_grouped_parameters = [
             {'params': [p for n, p in param_optimizer if not any(nd in n for nd in no_decay)],
-             'weight_decay': 0.01},
+             'weight_decay': args.weight_decay},
             {'params': [p for n, p in param_optimizer if any(nd in n for nd in no_decay)], 'weight_decay': 0.0}
         ]
 
@@ -116,8 +116,8 @@ class Train(object):
             optimizer = AdamW(optimizer_grouped_parameters, lr=args.learning_rate, eps=args.adam_epsilon)
 
         if args.optimizer != 'RADAM':
-            scheduler = WarmupLinearSchedule(optimizer, warmup_steps=args.warmup_steps,
-                                             t_total=num_train_optimization_steps)
+            scheduler = get_linear_schedule_with_warmup(optimizer, num_warmup_steps=args.warmup_steps,
+                                                        num_training_steps=num_train_optimization_steps)
 
         if args.fp16:
             try:
@@ -197,6 +197,10 @@ class Train(object):
                     mean_loss = tr_loss * args.gradient_accumulation_steps / nb_tr_steps
                     pbar.set_postfix_str(f"Loss: {mean_loss:.5f}")
                     if (step + 1) % args.gradient_accumulation_steps == 0:
+                        if args.fp16:
+                            torch.nn.utils.clip_grad_norm_(amp.master_params(optimizer), args.max_grad_norm)
+                        else:
+                            torch.nn.utils.clip_grad_norm_(model.parameters(), args.max_grad_norm)
                         optimizer.step()
                         if args.optimizer != 'RADAM':
                             scheduler.step()  # Update learning rate schedule
