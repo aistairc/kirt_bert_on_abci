@@ -56,23 +56,22 @@ def main():
     parser.add_argument('--fp16',
                         action='store_true',
                         help="Whether to use 16-bit float precision instead of 32-bit")
-    parser.add_argument('--loss_scale',
-                        type=float, default=0,
-                        help="Loss scaling to improve fp16 numeric stability. Only used when fp16 set to True.\n"
-                             "0 (default value): dynamic loss scaling.\n"
-                             "Positive power of 2: static loss scaling value.\n")
+    parser.add_argument("--learning_rate",
+                        default=3e-5,
+                        type=float,
+                        help="The initial learning rate for Optimizer.")
     parser.add_argument("--warmup_steps",
                         default=0,
                         type=int,
                         help="Linear warmup over warmup_steps.")
+    parser.add_argument("--weight_decay", default=0.0, type=float,
+                        help="Weight deay if we apply some.")
     parser.add_argument("--adam_epsilon",
                         default=1e-8,
                         type=float,
                         help="Epsilon for Adam optimizer.")
-    parser.add_argument("--learning_rate",
-                        default=3e-5,
-                        type=float,
-                        help="The initial learning rate for Adam.")
+    parser.add_argument("--max_grad_norm", default=1.0, type=float,
+                        help="Max gradient norm.")
     parser.add_argument('--seed',
                         type=int,
                         default=42,

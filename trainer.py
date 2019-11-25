@@ -12,10 +12,13 @@ from tqdm import tqdm
 from meta import DB, PregeneratedDataset
 from opt.lamb import Lamb
 from opt.radam import RAdam
+from opt.ranger import Ranger
 from transformers.optimization import AdamW, get_linear_schedule_with_warmup
 from utils import save_model, log_training
 
 logger = logging.getLogger(__name__)
+
+ADAMW, RADAM, LAMB, RANGER = 'adamw', 'radam', 'lamb', 'ranger'
 
 
 class Train(object):
@@ -108,14 +111,18 @@ class Train(object):
             {'params': [p for n, p in param_optimizer if any(nd in n for nd in no_decay)], 'weight_decay': 0.0}
         ]
 
-        if args.optimizer == 'LAMB':
+        optimizer_type = args.optimizer.lower()
+
+        if optimizer_type == LAMB:
             optimizer = Lamb(optimizer_grouped_parameters, lr=args.learning_rate, eps=args.adam_epsilon)
-        elif args.optimizer == 'RADAM':
+        elif optimizer_type == RADAM:
             optimizer = RAdam(optimizer_grouped_parameters, lr=args.learning_rate, eps=args.adam_epsilon)
+        elif optimizer_type == RANGER:
+            optimizer = Ranger(optimizer_grouped_parameters, lr=args.learning_rate, eps=args.adam_epsilon)
         else:
             optimizer = AdamW(optimizer_grouped_parameters, lr=args.learning_rate, eps=args.adam_epsilon)
 
-        if args.optimizer != 'RADAM':
+        if optimizer_type not in [RADAM, RANGER]:
             scheduler = get_linear_schedule_with_warmup(optimizer, num_warmup_steps=args.warmup_steps,
                                                         num_training_steps=num_train_optimization_steps)
 
@@ -146,7 +153,7 @@ class Train(object):
         logging.info(f"  Num examples = {total_train_examples}")
         logging.info("  Batch size = %d", args.train_batch_size)
         logging.info("  Num steps = %d", num_train_optimization_steps)
-        logging.info(f"  Optimizer = {args.optimizer}")
+        logging.info(f"  Optimizer = {optimizer_type}")
         model.train()
         best_loss = float("inf")
         training_log_file = os.path.join(args.output_dir, "training_logs.txt")
@@ -202,7 +209,7 @@ class Train(object):
                         else:
                             torch.nn.utils.clip_grad_norm_(model.parameters(), args.max_grad_norm)
                         optimizer.step()
-                        if args.optimizer != 'RADAM':
+                        if optimizer_type not in [RADAM, RANGER]:
                             scheduler.step()  # Update learning rate schedule
                         optimizer.zero_grad()
                         global_step += 1

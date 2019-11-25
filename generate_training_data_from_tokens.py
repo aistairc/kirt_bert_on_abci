@@ -4,7 +4,7 @@ import traceback
 from argparse import ArgumentParser
 from multiprocessing import Pool
 from pathlib import Path
-from random import random, randint, shuffle, choice
+from random import random, shuffle, choice
 
 import numpy as np
 from tqdm import tqdm
@@ -150,8 +150,6 @@ def create_samples_from_document(doc_idx, doc_database, args, tokenizer, vocab_l
     # The `target_seq_length` is just a rough target however, whereas
     # `max_seq_length` is a hard limit.
     target_seq_length = max_num_tokens
-    if random() < short_seq_prob:
-        target_seq_length = randint(2, max_num_tokens)
 
     # We concatenate all of the tokens from one or more documents into a long sequence.
     # An option for adding or not [SEP] to every end of sentence
@@ -165,6 +163,7 @@ def create_samples_from_document(doc_idx, doc_database, args, tokenizer, vocab_l
         # Add [SEP] token to the end of last document
         current_chunk.append(["[SEP]"])
         current_length += 1
+        target_seq_length -= 1
     i = 0
     try:
         while i < len(document):
@@ -173,6 +172,7 @@ def create_samples_from_document(doc_idx, doc_database, args, tokenizer, vocab_l
             current_length += len(segment)
             if separate_sentences:
                 current_length += 1  # for [SEP]
+                target_seq_length -= 1
             # if i == len(document) - 1 or current_length >= target_seq_length:
             if current_length >= target_seq_length:
                 # Packaging and add to samples
