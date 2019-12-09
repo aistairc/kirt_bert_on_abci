@@ -1,7 +1,48 @@
-# ABCI-BERT
-Training BERT on ABCI
+# ABCI-BERT_BETA
+Training BERT on ABCI (Beta version)
 
-# Build vocab:
+# *** _New updates_ ***
+## Group samples by length
+- In this version, we group the samples into three chunks with fix length for each chunk (128, 256, 512). Chunk with length of N contains the concatenation of sentences with length <= (N-2)
+- With continuous short sentences, we consider them as a long sentence and merge them directly.
+- With discontinuous short sentences, we add a separator character between them. The sentences from different documents will have separator as well
+- One sample in chunk N will be built by concatenating method as above, until they reach the length of N-2. The 2 spaces are used for CLS and SEP token
+
+## Training directly from tokens
+The pipeline in alpha version is: Generate tokens -> Generate training data from tokens -> Train from generated data. In this beta version, we shorten this pipeline to: Generate tokens (grouped by length) -> Train from tokens
+
+## Support multiprocessing when generating tokens
+We realize that it's not necessary to put all raw text into one single file because it eliminates the use of multiprocessing. In this version, we recommend the user split their raw text into small files. Our codes will support process these files simultaneously (one process for each file), so we can speed up tokens generating process
+
+## Support training from multiple tokens files
+Once we finish generating tokens from multiple small files, we will have the corresponding number of tokens files. We don't have to merge them into one file, just put them all in one folder and train. 
+
+## Support training from multiple folders
+In this version, we also support training from multiple folders. With the assumption that we may need to train the BERT with samples length of 128 first, and then 256 and 512. Please note that we only support the 2-level directory, it means we have to put all the training data to the second-level subfolders under the root folder, which we defined by parameter --tokens_dir when training. E.g: 
+```
+├── root_tokens_dir
+│   ├── tokens_128
+│        ├── training tokens files ...
+│   ├── tokens_256
+│        ├── training tokens files ...
+│   ├── tokens_512
+|        ├── training tokens files ...
+```
+When training, each tokens subfolder will be trained sequentially with a particular batch-size and number of epochs as well. The list of tokens subfolders needs to be defined by parameter --tokens_dir_list, while the list of batch-sizes and epochs correspond to --batch_size_list and --epochs_list. If we don't define the  --batch_size_list and --epochs_list, all tokens subfolder will be trained with the same batch-size and number of epochs, which are defined by the parameters --training_batch_size and --epochs. An example of configurations is below: 
+```
+--tokens_dir_list=tokens_128,tokens_256,tokens_512
+--batch_size_list=32,16,8
+--epochs_list=2,4,6
+```
+We also support a special mode called various length training. Activate this mode by adding parameter --train_various_length. It's pretty the same with training with multiple folders. The only difference is that we only use one Optimizer/Scheduler during the training process, instead of each Optimizer/Scheduler for each tokens subfolder. 
+
+## Support transfer learning from pre-trained BERT models
+In this version, we also support transfer learning from pre-trained BERT models. Please note that, in case of transfer learning, we don't have to build own vocab. We're gonna use the vocab as well as the configuration file of the pre-trained BERT. Configure the parameter --bert_pretrained_model instead of --bert_model
+
+# Prepare raw text data for training BERT
+The raw text data needs to be separated each sentence per line and each document needs to be separated by one empty line. It should be better to put a white space between the last punctuation and the last word of the sentence.  
+
+# Build vocab
 Step 1: Prepare all your raw text data into one single text file, e.g: single.txt
 ```
 python build_vocab.py -i {path}/single.txt -v {vocab_size}
@@ -15,40 +56,48 @@ python preprocessing.py build-bert-vocab -i spm.vocab
 ```
 Step 2 will result "vocab.txt" file that we can use for training the BERT. Manually move spm.vocab and spm.model file since they're not used anymore
 
-# Pre-generate training data
-pregenerate training data is a well applicable step when training BERT from large data. By this way, it help separate the need for computation resources. While data pre-processing can be done using only CPU, then training from these processed data may be performed on more powerful calculation unit like GPU or TPU. More over, data once being pre-generated can be used for different training scenarios. Pre-generating training data contains two steps:
-* [Generate BERT tokens](#generate_bert_tokens)
-* [Generate training data from tokens](#generate_training_data_from_tokens)
-
-## <a name="generate_bert_tokens"></a>  Generate BERT tokens
+# Generate BERT tokens
 Generate sub-word tokens from text, using BertTokenizer, and save tokens into _shelf.db binary file. 
 ```
-python generate_bert_tokens.py --raw_text_file=data/raw_text/single.txt --vocab_dir=data/generated/vocab_50k/vocab.txt --output_dir=data/generated/tokens/ --max_seq_len=512
-```
-
-## <a name="generate_training_data_from_tokens"></a> Generate training data from tokens
-Generate epoch data for training, from generated tokens, the --max_seq_len argument should be matched with generated tokens. Generated epoch data will be saved into shelf.db binary file
-```
-python generate_training_data_from_tokens.py --tokens_dir=data/generated/tokens/ --vocab_dir=data/generated/vocab_50k/vocab.txt --output_dir=data/generated/epochs/ --epochs_to_generate=5 --max_seq_len=512 --do_whole_word_mask --num_workers=5
+python generate_bert_tokens_grouped_by_length.py --raw_text_dir=data/splitted_raw_text/ --vocab_dir=data/generated/vocab_50k/vocab.txt --output_dir=data/generated/tokens/
 ```
 
 # Training the BERT
 We train the BERT following the strategy of [RoBERTa](#https://arxiv.org/pdf/1907.11692.pdf), with making use of BertForMaskedLM from [huggingface's transformers](#https://github.com/huggingface/transformers/blob/master/transformers/modeling_bert.py)
 ```
-python train_on_pregenerated.py --pregenerated_data=data/generated/epochs/ --bert_model=data/generated/abci_bert_base/ --output_dir=data/generated/abci_bert_base/model/ --train_batch_size=8 --epochs=5 --learning_rate=1e-4 --optimizer=RADAM --large_train_data --fp16 --save_checkpoint_steps=5
-
+python train_on_tokens.py 
+   --tokens_dir=data/generated/tokens
+   --tokens_dir_list=tokens_128,tokens_256,tokens_512
+   --batch_size_list=32,16,8
+   --batch_size_list=2,4,6
+   --bert_model=models/abci_bert_base/ 
+   --output_dir=data/generated/abci_bert_base/model/ 
+   --train_batch_size=32 
+   --epochs=2 
+   --learning_rate=1e-4 
+   --optimizer=RADAM  k
+   --fp16 
+   --save_checkpoint_steps=10000
+   --mlm
+   --mean_batch_loss_size=1000
+   --train_various_length
 ```
-## Traing the BERT on ABCI
-We also prepare a script for training the BERT on the ABCI: train.sh, where the training can be performed using multiple GPUs distributed through multiple ABCI nodes. Customize below parameters up to your usage:
+
+# Traing the BERT on ABCI
+## Prepare train job scrip
+We prepare a sample script for training the BERT on the ABCI: train_job.sh, where the training can be performed using multiple GPUs distributed through multiple ABCI nodes. Customize below parameters up to your usage:
 ```bash
 #$ -l rt_G.large=1: rt_G.large = the ABCI node type (https://abci.ai/en/about_abci/cloud_service.html)
 #$ -l h_rt=72:00:00: 72 = running time (hours)
 NUM_NODES=2: 2 = number of ABCI nodes
 #$ -t 1-2: In case of changing the NUM_NODES to X, please change this configuration to '1-X'
 ```
-***IMPORTANT: Manually create/clear cache dir before training, while cache dir is configured in train.sh here: ***
+
+## Submit train job
+Submit your train job script using submit_train_job.sh. Customize below parameters up to your usage:
 ```
 CACHE_DIR=".cache"
+qsub -g {group_id} submit_train_job.sh
 ```
 
 # Evaluate trained BERT model
@@ -59,3 +108,4 @@ The table below shows the overall score on the development set of [Cancer Geneti
 |:-------:|:---------:|:------:|:-----:|
 | BERT-on-ABCI |     82.44 |  82.48 | 83.50 |
 | SciBERT | 82.36 | 82.84 | 82.60 |
+

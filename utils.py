@@ -137,6 +137,24 @@ def log_training(log_file, global_step, loss, is_best_loss):
             writer.write("Loss = %s\n" % str(loss))
 
 
+def log_training_with_local_loss(log_file, global_step, loss, is_best_loss):
+    mean_epoch_loss = loss[0]
+    mean_local_loss = loss[1]
+    is_best_epoch_loss = is_best_loss[0]
+    is_best_local_loss = is_best_loss[1]
+    with open(log_file, "a+") as writer:
+        writer.write("Global step = %s\n" % str(global_step))
+        if is_best_epoch_loss:
+            writer.write("Mean epoch loss = %s(New best epoch loss)\n" % str(mean_epoch_loss))
+        else:
+            writer.write("Mean epoch loss = %s\n" % str(mean_epoch_loss))
+
+        if is_best_local_loss:
+            writer.write("Mean local loss = %s(New best local loss)\n" % str(mean_local_loss))
+        else:
+            writer.write("Mean local loss = %s\n" % str(mean_local_loss))
+
+
 class TqdmStream(object):
     def write(self, buffer):
         if buffer.strip():

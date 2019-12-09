@@ -77,7 +77,7 @@ class BatchProcessor():
         return self.mask_tokens(batch)
 
 
-class Train(object):
+class VLTrain(object):
 
     @staticmethod
     def train_partition(data_loader, model, optimizer, scheduler, curr_global_step, curr_losses, best_losses,
@@ -176,48 +176,47 @@ class Train(object):
         best_losses = (best_epoch_loss, best_local_loss)
         nb_tr_counter = (nb_tr_examples, nb_tr_steps)
         mean_losses = (mean_epoch_loss, mean_local_loss)
+
         return global_step, curr_losses, best_losses, nb_tr_counter, mean_losses
 
     @staticmethod
-    def train(model, tokenizer, args, best_losses=None, curr_global_step=0):
+    def train_epoch(train_dls, model, optimizer, scheduler, epochs, curr_global_step, best_losses, args, desc=None):
+        global_step = curr_global_step
+        mean_losses = None
+        for _ in trange(int(epochs), desc="Epoch", disable=args.local_rank not in [-1, 0]):
+            if not best_losses:
+                best_epoch_loss = float("inf")
+                best_local_loss = float("inf")
+            else:
+                best_epoch_loss = best_losses[0]
+                best_local_loss = best_losses[1]
+            epoch_tr_loss = 0
+            local_tr_losses = []
+            nb_tr_examples, nb_tr_steps = 0, 0
+            best_losses = (best_epoch_loss, best_local_loss)
+            curr_losses = (epoch_tr_loss, local_tr_losses)
+            nb_tr_counter = (nb_tr_examples, nb_tr_steps)
+            for train_dl in train_dls:
+                global_step, curr_losses, best_losses, nb_tr_counter, mean_losses = VLTrain.train_partition(train_dl,
+                                                                                                            model,
+                                                                                                            optimizer,
+                                                                                                            scheduler,
+                                                                                                            global_step,
+                                                                                                            curr_losses,
+                                                                                                            best_losses,
+                                                                                                            nb_tr_counter,
+                                                                                                            args, desc)
+        return global_step, best_losses, mean_losses
+
+    @staticmethod
+    def train(model, tokenizer, args):
         """ Train the model """
 
         logging.basicConfig(format='%(asctime)s - %(levelname)s - %(name)s -   %(message)s',
                             datefmt='%m/%d/%Y %H:%M:%S',
                             level=logging.INFO if args.local_rank in [-1, 0] else logging.WARN)
 
-        file_names = glob(os.path.join(args.tokens_dir, "*.db.dat"))
-        if len(file_names) == 0:
-            file_names = glob(os.path.join(args.tokens_dir, "*.db"))
-
-        print(file_names)
         batch_processor = BatchProcessor(tokenizer, args)
-
-        train_dls = []
-        nb_train_examples = 0
-        for file_name in file_names:
-            token_db_file_name = os.path.splitext(os.path.splitext(os.path.basename(file_name))[0])[0].replace('_shelf',
-                                                                                                               '')
-            token_db = DB(storage_dir=args.tokens_dir, name=token_db_file_name, to_write=False)
-            ids = list(token_db.shelf.keys())
-            nb_train_examples += len(token_db)
-            train_data = TokenDS(token_db, ids)
-            if args.local_rank == -1:
-                sampler = RandomSampler(train_data)
-            else:
-                sampler = DistributedSampler(train_data)
-            train_dl = DataLoader(train_data, sampler=sampler, batch_size=args.train_batch_size,
-                                  collate_fn=batch_processor.process_batch, num_workers=5)
-            train_dls.append(train_dl)
-
-            print(len(token_db))
-
-        total_train_examples = args.epochs * nb_train_examples
-        num_train_optimization_steps = int(
-            total_train_examples / args.train_batch_size / args.gradient_accumulation_steps)
-
-        if args.local_rank != -1:
-            num_train_optimization_steps = num_train_optimization_steps // torch.distributed.get_world_size()
 
         # Prepare optimizer
         param_optimizer = list(model.named_parameters())
@@ -238,12 +237,66 @@ class Train(object):
             optimizer = Ranger(optimizer_grouped_parameters, lr=args.learning_rate, eps=args.adam_epsilon)
         else:
             optimizer = AdamW(optimizer_grouped_parameters, lr=args.learning_rate, eps=args.adam_epsilon)
-
-        if optimizer_type not in [RADAM, RANGER]:
-            scheduler = get_linear_schedule_with_warmup(optimizer, num_warmup_steps=args.warmup_steps,
-                                                        num_training_steps=num_train_optimization_steps)
+        logging.info(f"  Optimizer = {optimizer_type}")
+        token_dbs = {}
+        logging.info("***** Reading data *****")
+        tokens_root_dir = args.tokens_dir
+        tokens_dir_list = args.tokens_dir_list.split(',')
+        if not args.batch_size_list:
+            batch_size_list = [args.train_batch_size] * len(tokens_dir_list)
         else:
-            scheduler = None
+            batch_size_list = args.batch_size_list.split(',')
+            batch_size_list = [int(batch_size) for batch_size in batch_size_list]
+
+        if not args.epochs_list:
+            epochs_list = [args.epochs] * len(tokens_dir_list)
+        else:
+            epochs_list = args.epochs_list.split(',')
+            epochs_list = [int(epochs) for epochs in epochs_list]
+
+        if tokens_dir_list:
+            for tokens_dir_name, batch_size, epochs in zip(tokens_dir_list, batch_size_list, epochs_list):
+                tokens_dir = os.path.join(tokens_root_dir, tokens_dir_name)
+                file_names = glob(os.path.join(tokens_dir, "*.db.dat"))
+                if len(file_names) == 0:
+                    file_names = glob(os.path.join(tokens_dir, "*.db"))
+                train_dls = []
+                nb_train_examples = 0
+                for file_name in file_names:
+                    token_db_file_name = os.path.splitext(os.path.splitext(os.path.basename(file_name))[0])[0].replace(
+                        '_shelf',
+                        '')
+                    token_db = DB(storage_dir=tokens_dir, name=token_db_file_name, to_write=False)
+                    ids = list(token_db.shelf.keys())
+                    nb_train_examples += len(token_db)
+                    train_data = TokenDS(token_db, ids)
+                    if args.local_rank == -1:
+                        sampler = RandomSampler(train_data)
+                    else:
+                        sampler = DistributedSampler(train_data)
+                    train_dl = DataLoader(train_data, sampler=sampler, batch_size=batch_size,
+                                          collate_fn=batch_processor.process_batch, num_workers=5)
+                    train_dls.append(train_dl)
+
+                total_train_examples = epochs * nb_train_examples
+                num_train_optimization_steps = int(
+                    total_train_examples / batch_size / args.gradient_accumulation_steps)
+
+                if args.local_rank != -1:
+                    num_train_optimization_steps = num_train_optimization_steps // torch.distributed.get_world_size()
+
+                if optimizer_type not in [RADAM, RANGER]:
+                    scheduler = get_linear_schedule_with_warmup(optimizer, num_warmup_steps=args.warmup_steps,
+                                                                num_training_steps=num_train_optimization_steps)
+                else:
+                    scheduler = None
+
+                logging.info(f"  Tokens folder: {tokens_dir}")
+                logging.info(f"  Num examples = {total_train_examples}")
+                logging.info("  Batch size = %d", batch_size)
+                logging.info("  Num steps = %d", num_train_optimization_steps)
+
+                token_dbs[tokens_dir_name] = (train_dls, scheduler, epochs)
 
         if args.fp16:
             try:
@@ -267,43 +320,20 @@ class Train(object):
                                                               find_unused_parameters=True)
             logging.info('Finish wrapping model with DistributedDataParallel')
 
-        global_step = curr_global_step
-        logging.info("***** Running training *****")
-        logging.info(f"  Num examples = {total_train_examples}")
-        logging.info("  Batch size = %d", args.train_batch_size)
-        logging.info("  Num steps = %d", num_train_optimization_steps)
-        logging.info(f"  Optimizer = {optimizer_type}")
-
-        if not best_losses:
-            best_epoch_loss = float("inf")
-            best_local_loss = float("inf")
-        else:
-            best_epoch_loss = best_losses[0]
-            best_local_loss = best_losses[1]
-
+        global_step = 0
+        best_losses = None
+        mean_losses = None
         # Remove old eval file:
         training_log_file = os.path.join(args.output_dir, "training_logs.txt")
         command = 'rm ' + training_log_file
         os.system(command)
-        mean_losses = None
-        for _ in trange(int(args.epochs), desc="Epoch", disable=args.local_rank not in [-1, 0]):
-            epoch_tr_loss = 0
-            local_tr_losses = []
-            nb_tr_examples, nb_tr_steps = 0, 0
-            best_losses = (best_epoch_loss, best_local_loss)
-            curr_losses = (epoch_tr_loss, local_tr_losses)
-            nb_tr_counter = (nb_tr_examples, nb_tr_steps)
 
-            for train_dl in train_dls:
-                global_step, curr_losses, best_losses, nb_tr_counter, mean_losses = Train.train_partition(train_dl,
-                                                                                                          model,
-                                                                                                          optimizer,
-                                                                                                          scheduler,
-                                                                                                          global_step,
-                                                                                                          curr_losses,
-                                                                                                          best_losses,
-                                                                                                          nb_tr_counter,
-                                                                                                          args)
+        for tokens_dir_name, (train_dls, scheduler, epochs) in token_dbs.items():
+            global_step, best_losses, mean_losses = VLTrain.train_epoch(train_dls, model, optimizer,
+                                                                        scheduler, epochs, global_step, best_losses,
+                                                                        args,
+                                                                        desc='Training {}'.format(tokens_dir_name))
+
         # # Save the last model
         mean_epoch_loss, mean_local_loss = mean_losses
         best_epoch_loss, best_local_loss = best_losses
@@ -313,14 +343,12 @@ class Train(object):
             is_best_local_loss = False
             if mean_epoch_loss < best_epoch_loss:
                 best_epoch_loss = mean_epoch_loss
-                logging.info(
-                    f"  \nNew best epoch train loss = {best_epoch_loss} at step {str(global_step)}")
+                logging.info(f"  \nNew best epoch train loss = {best_epoch_loss} at step {str(global_step)}")
                 is_best_epoch_loss = True
 
             if mean_local_loss < best_local_loss:
                 best_local_loss = mean_local_loss
-                logging.info(
-                    f"  \nNew best local train loss = {best_local_loss} at step {str(global_step)}")
+                logging.info(f"  \nNew best local train loss = {best_local_loss} at step {str(global_step)}")
                 is_best_local_loss = True
 
             logging.info("** ** * Saving model ** ** * ")
@@ -331,6 +359,3 @@ class Train(object):
                        )
             log_training_with_local_loss(training_log_file, global_step, (mean_epoch_loss, mean_local_loss),
                                          (is_best_epoch_loss, is_best_local_loss))
-
-        best_losses = (best_epoch_loss, best_local_loss)
-        return global_step, best_losses
