@@ -53,8 +53,9 @@ CACHE_DIR=".cache"
 
 # Evaluate trained BERT model
 For assessing the performance of our pre-trained BERT model, we conducted the experiment on the Named Entity Recognition task using the model implemented [here](https://github.com/dnanhkhoa/ProtoNLP). This model is inspired by the paper "[Deep Exhaustive Model for Nested Named Entity Recognition](https://www.aclweb.org/anthology/D18-1309.pdf)" with replacing the LSTM layer by BERT. 
-The table below shows the overall score on the development set of [Cancer Genetics 2013](http://2013.bionlp-st.org/tasks/cancer-genetics) corpus.
+The table below shows the overall score on the development set of [Cancer Genetics 2013](http://2013.bionlp-st.org/tasks/cancer-genetics) corpus. We will add more results later. 
 
 |  Model  | Precision | Recall |   F1  |
 |:-------:|:---------:|:------:|:-----:|
-| BERT-on-ABCI |     80.66 |  81.22 | 80.94 |
+| BERT-on-ABCI |     82.44 |  82.48 | 83.50 |
+| SciBERT | 82.36 | 82.84 | 82.60 |
