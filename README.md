@@ -1,5 +1,5 @@
 # ABCI-BERT_BETA
-Training BERT [1] on ABCI (Beta version) using [Transformers](https://github.com/huggingface/transformers).
+Training [BERT](https://www.aclweb.org/anthology/N19-1423/) on ABCI (Beta version) using [Huggingface's Transformers](https://github.com/huggingface/transformers).
 
 # *** _New updates_ ***
 ## Group samples by length
@@ -101,7 +101,7 @@ qsub -g {group_id} submit_train_job.sh
 ```
 
 # Evaluate trained BERT model
-For assessing the performance of our pre-trained BERT model, we conducted the experiment on the Named Entity Recognition task using the model implemented [here](https://github.com/dnanhkhoa/ProtoNLP). This model is inspired by the paper "[Deep Exhaustive Model for Nested Named Entity Recognition](https://www.aclweb.org/anthology/D18-1309.pdf)"[2] with replacing the LSTM layer by BERT. 
+For assessing the performance of our pre-trained BERT model, we conducted the experiment on the Named Entity Recognition task using the model implemented [here](https://github.com/dnanhkhoa/ProtoNLP). This model is inspired by the paper "[Deep Exhaustive Model for Nested Named Entity Recognition](https://www.aclweb.org/anthology/D18-1309.pdf)" with replacing the LSTM layer by BERT. 
 The table below shows the overall score on the development set of [Cancer Genetics 2013](http://2013.bionlp-st.org/tasks/cancer-genetics) corpus. We will add more results later. 
 
 |  Model  | Precision | Recall |   F1  |
@@ -113,6 +113,8 @@ The table below shows the overall score on the development set of [Cancer Geneti
 
 # References
 
-[1] Jacob Devlin, Ming-Wei Chang, Kenton Lee and Kristina Toutanova, "BERT: Pre-training of Deep Bidirectional Transformers for Language Understanding." In Proceedings of the 2019 Conference of the North American Chapter of the Association for Computational Linguistics: Human Language Technologies, Volume 1 (Long and Short Papers), pp. 4171-4186. 2019.
+- Jacob Devlin, Ming-Wei Chang, Kenton Lee and Kristina Toutanova, "BERT: Pre-training of Deep Bidirectional Transformers for Language Understanding." In Proceedings of the 2019 Conference of the North American Chapter of the Association for Computational Linguistics: Human Language Technologies, Volume 1 (Long and Short Papers), pp. 4171-4186. 2019.
 
-[2] Mohammad Golam Sohrab and Makoto Miwa. "Deep exhaustive model for nested named entity recognition." In Proceedings of the 2018 Conference on Empirical Methods in Natural Language Processing, pp. 2843-2849. 2018.
+- Yinhan Liu, Myle Ott, Naman Goyal, Jingfei Du, Mandar Joshi, Danqi Chen, Omer Levy, Mike Lewis, Luke Zettlemoyer, Veselin Stoyanov, "Robustly Optimized BERT Pretraining Approach." ArXiv. 2019.
+
+- Mohammad Golam Sohrab and Makoto Miwa. "Deep exhaustive model for nested named entity recognition." In Proceedings of the 2018 Conference on Empirical Methods in Natural Language Processing, pp. 2843-2849. 2018.
