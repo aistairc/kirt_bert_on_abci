@@ -114,4 +114,5 @@ The table below shows the overall score on the development set of [Cancer Geneti
 # References
 
 [1] Jacob Devlin, Ming-Wei Chang, Kenton Lee and Kristina Toutanova, "BERT: Pre-training of Deep Bidirectional Transformers for Language Understanding." In Proceedings of the 2019 Conference of the North American Chapter of the Association for Computational Linguistics: Human Language Technologies, Volume 1 (Long and Short Papers), pp. 4171-4186. 2019.
+
 [2] Mohammad Golam Sohrab and Makoto Miwa. "Deep exhaustive model for nested named entity recognition." In Proceedings of the 2018 Conference on Empirical Methods in Natural Language Processing, pp. 2843-2849. 2018.
