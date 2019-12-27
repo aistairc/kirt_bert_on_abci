@@ -1,5 +1,5 @@
 # ABCI-BERT_BETA
-Training BERT on ABCI (Beta version) using [Transformers](https://github.com/huggingface/transformers).
+Training BERT [1] on ABCI (Beta version) using [Transformers](https://github.com/huggingface/transformers).
 
 # *** _New updates_ ***
 ## Group samples by length
