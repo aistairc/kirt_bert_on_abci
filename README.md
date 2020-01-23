@@ -118,3 +118,7 @@ The table below shows the overall score on the development set of [Cancer Geneti
 - Yinhan Liu, Myle Ott, Naman Goyal, Jingfei Du, Mandar Joshi, Danqi Chen, Omer Levy, Mike Lewis, Luke Zettlemoyer, Veselin Stoyanov, "Robustly Optimized BERT Pretraining Approach." ArXiv. 2019.
 
 - Mohammad Golam Sohrab and Makoto Miwa. "Deep exhaustive model for nested named entity recognition." In Proceedings of the 2018 Conference on Empirical Methods in Natural Language Processing, pp. 2843-2849. 2018.
+
+# Acknowledgement
+
+The results are obtained from "Strategic Advancement of Multi-Purpose Ultra-Human Robot and Artificial Intelligence Technologies（SamuRAI） Project" and "Ultra High-Throughput Design and Prototyping Technology for Ultra Advanced Materials Development Project" commissioned by the New Energy and Industrial Technology Development Organization (NEDO) and a project commissioned by Public/Private R&D Investment Strategic Expansion PrograM (PRISM).
