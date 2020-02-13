@@ -84,7 +84,7 @@ python train_on_tokens.py
 ```
 
 # Traing the BERT on ABCI
-## Prepare train job scrip
+## Prepare train job script
 We prepare a sample script for training the BERT on the ABCI: train_job.sh, where the training can be performed using multiple GPUs distributed through multiple ABCI nodes. Customize below parameters up to your usage:
 ```bash
 #$ -l rt_G.large=1: rt_G.large = the ABCI node type (https://abci.ai/en/about_abci/cloud_service.html)
