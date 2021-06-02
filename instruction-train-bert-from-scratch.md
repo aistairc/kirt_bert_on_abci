@@ -21,14 +21,14 @@ Install libs to new environment (copy and paste to command line, choose y (yes) 
 	$ pip install sentencepiece loguru cchardet torch tokenizers tensorboardX
 	
 
-# 3/ Download and unzip kirt_vctrans GitHub Repo to kirt_vctrans folder.
+# 3/ Download and unzip kirt_bert_on_abci GitHub Repo to kirt_bert_on_abci folder.
 Prepare all your raw text data into one single text file, e.g: single.txt
 Train sentencePiece:
 	
 	$ qrsh -g gab99999 -l rt_G.large=1 -l h_rt=12:00:00
 	$ conda activate pytorch-test
 	$ cd ~
-	$ cd kirt_vctrans
+	$ cd kirt_bert_on_abci
 	$ python build_vocab.py -i data/raw/single.txt -v 32000
 	
 This process generates "spm.model" and "spm.vocab"
@@ -50,7 +50,7 @@ Convert spm.vocab to vocab.txt and move to vocab folder:
 	$ qrsh -g gab99999 -l rt_G.small=1 -l h_rt=12:00:00
 	$ conda activate pytorch-test
 	$ cd ~
-	$ cd kirt_vctrans
+	$ cd kirt_bert_on_abci
 	$ python generate_bert_tokens_grouped_by_length.py --raw_text_dir data/raw/ --vocab_dir vocab/test/ --output_dir data/generated/tokens/  --disable_tokenize_chinese_chars
 	$ cd data/generated/tokens/
 	$ mkdir tokens_128 tokens_256 tokens_384 tokens_512
@@ -69,7 +69,7 @@ Exit node Small after the process.
 # 5/ Create model input / output folders. Put vocab.txt, config.json into models/test/in folder.
 	
 	$ cd ~
-	$ cd kirt_vctrans
+	$ cd kirt_bert_on_abci
 	$ mkdir models
 	$ mkdir models/test
 	$ mkdir models/test/in
