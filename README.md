@@ -106,7 +106,7 @@ The table below shows the overall score on the development set of [Cancer Geneti
 
 |  Model  | Precision | Recall |   F1  |
 |:-------:|:---------:|:------:|:-----:|
-| BERT-on-ABCI |     82.44 |  82.48 | 83.50 |
+| BERT-on-ABCI |     82.44 |  84.80 | 83.50 |
 | SciBERT | 82.36 | 82.84 | 82.60 |
 | BioBERT | 82.68 | 83.70 | 83.19 |
 | BERT | 79.98 | 78.70 | 79.33 |
